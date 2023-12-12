@@ -1,4 +1,5 @@
 import os
+import json
 import httpx
 import aiofiles
 from io import BytesIO
@@ -6,20 +7,9 @@ from PIL import Image
 
 from typing import Union
 
-from starlette.background import BackgroundTask
-from starlette.responses import StreamingResponse
-
 from .errors import CloudflareAIError
 from .tools import process_streaming_response
-from .const import (
-    AiImageClassificationModels,
-    AiTextGenerationModels,
-    AiSpeechRecognitionModels,
-    AiTranslationModels,
-    AiTextToImageModels,
-    Translation_Languages,
-)
-
+from .const import CloudflareAIConst
 
 class CloudflareAI:
     """
@@ -29,13 +19,20 @@ class CloudflareAI:
     :param account_identifier: Cloudflare account identifier.
     """
 
-    def __init__(self, Cloudflare_API_Key: str, Cloudflare_Account_Identifier: str):
+    def __init__(self, Cloudflare_API_Key: str, Cloudflare_Account_Identifier: str) -> None:
         self.api_key: str = Cloudflare_API_Key
         self.account_identifier: str = Cloudflare_Account_Identifier
         self.base_url: str = "https://api.cloudflare.com/client/v4/accounts/{account_identifier}/ai/run/{model_name}"
         self.headers: dict = {
             "Authorization": f"Bearer {Cloudflare_API_Key}",
         }
+        self.const = CloudflareAIConst()
+
+        if not self.api_key:
+            raise CloudflareAIError("Cloudflare API key is required.")
+        
+        if not self.account_identifier:
+            raise CloudflareAIError("Cloudflare account identifier is required.")
 
     async def _fetch(
         self,
@@ -44,7 +41,7 @@ class CloudflareAI:
         data: dict,
         headers: dict = None,
         stream: str = False,
-    ) -> Union[dict, StreamingResponse, CloudflareAIError]:
+    ) -> Union[dict, CloudflareAIError]:
         """
         httpx request wrapper.
 
@@ -54,7 +51,7 @@ class CloudflareAI:
         :param headers: Request headers.
         :param stream: Stream response.
 
-        :return: dict or StreamingResponse or CloudflareAIError
+        :return: dict or CloudflareAIError
         """
 
         if headers is not None:
@@ -70,12 +67,11 @@ class CloudflareAI:
                 )
             response = await client.send(req, stream=stream)
             if response.status_code == 200:
-                if stream:
-                    return StreamingResponse(
-                        response.aiter_text(),
-                        background=BackgroundTask(response.aclose),
-                    )
-                return response
+                if not stream:
+                    return response 
+                else:
+                    async for line in response.aiter_lines():
+                        print(line)
             else:
                 raise CloudflareAIError(
                     f"Error {response.status_code}: {response.reason_phrase}"
@@ -83,7 +79,7 @@ class CloudflareAI:
 
     async def ImageClassification(
         self, image_path, model_name: str
-    ) -> Union[dict, StreamingResponse, CloudflareAIError]:
+    ) -> Union[dict, CloudflareAIError]:
         """
         Image classification models take an image input and assigns it labels or classes.
 
@@ -92,7 +88,7 @@ class CloudflareAI:
 
         :return: dict
         """
-        if model_name not in AiImageClassificationModels:
+        if model_name not in self.const.AiImageClassificationModels:
             raise CloudflareAIError(f"Model name {model_name} is not supported.")
 
         url = self.base_url.format(
@@ -127,7 +123,7 @@ class CloudflareAI:
 
         :return: dict
         """
-        if model_name not in AiTextGenerationModels:
+        if model_name not in self.const.AiTextGenerationModels:
             raise CloudflareAIError(f"Model name {model_name} is not supported.")
 
         if len(prompt) > 4096:
@@ -153,7 +149,7 @@ class CloudflareAI:
             response = await self._fetch(
                 "POST", url, headers=headers, data=payload, stream=stream
             )
-            await process_streaming_response(response)
+            return
         else:
             response = await self._fetch("POST", url, headers=headers, data=payload)
             return response.json()
@@ -169,7 +165,7 @@ class CloudflareAI:
 
         :return: dict
         """
-        if model_name not in AiSpeechRecognitionModels:
+        if model_name not in self.const.AiSpeechRecognitionModels:
             raise CloudflareAIError(f"Model name {model_name} is not supported.")
 
         if not os.path.isfile(audio_path):
@@ -199,12 +195,12 @@ class CloudflareAI:
 
         :return: dict or CloudflareAIError
         """
-        if model_name not in AiTranslationModels:
+        if model_name not in self.const.AiTranslationModels:
             raise CloudflareAIError(f"Model name {model_name} is not supported.")
 
         if (
-            source_lang not in Translation_Languages
-            or target_lang not in Translation_Languages
+            source_lang not in self.const.TranslationLanguages
+            or target_lang not in self.const.TranslationLanguages
         ):
             raise CloudflareAIError(
                 f"Language {source_lang} or {target_lang} is not supported."
@@ -233,7 +229,7 @@ class CloudflareAI:
 
         :return: dict or CloudflareAIError
         """
-        if model_name not in AiTextToImageModels:
+        if model_name not in self.const.AiTextToImageModels:
             raise CloudflareAIError(f"Model name {model_name} is not supported.")
 
         url = self.base_url.format(
