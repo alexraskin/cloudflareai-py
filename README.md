@@ -15,31 +15,29 @@ pip install cloudflare-ai
 
 ```python
 import asyncio
-from CloudflareAI import CloudflareAI
+
+from CloudflareAI import CloudflareAI, AiTextToImageModels, AiTextGenerationModels, AiImageClassificationModels
 
 
 async def main():
     ai = CloudflareAI(
-        Cloudflare_API_Key="",
-        Cloudflare_Account_Identifier="",
+        Cloudflare_API_Key=<Your Token>,
+        Cloudflare_Account_Identifier=<Account ID>,
     )
     image = await ai.ImageClassification(
-        image_path="image.jpg", model_name="@cf/microsoft/resnet-50"
+        image_path="image.jpg", model_name=AiImageClassificationModels.RESNET_50
     )
 
     text = await ai.TextGeneration(
-        prompt="Hello, my name is Alex",
+        prompt="You are helpful",
         system_prompt="Hello, my name is Alex",
-        model_name="@cf/meta/llama-2-7b-chat-fp16",
-        max_tokens=100,
-        stream=False,
+        model_name=AiTextGenerationModels.CODE_LLAMA_7B,
     )
-
-    image = await ai.TextToImage(
-        prompt="A cat on a cloud",
-        model_name="@cf/stabilityai/stable-diffusion-xl-base-1.0",
-    ) # This will save the image in the current directory as your prompt.
-
+    image = await ai.TextToImage(prompt="a Cat", model_name=AiTextToImageModels.XL_BASE)
 
 asyncio.run(main())
 ```
+
+## License
+
+Mozilla Public License Version 2.0 (MPL-2.0) - See LICENSE for more information.

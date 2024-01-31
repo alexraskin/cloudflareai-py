@@ -3,3 +3,4 @@ __pycahce__/*
 dist/*
 build/*
 *.egg-info/*
+.vscode/*

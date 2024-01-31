@@ -1,4 +1,4 @@
-class CloudflareAIError(Exception):
+class CloudflareException(Exception):
     """Base exception class for CloudflareAI"""
 
     ...
