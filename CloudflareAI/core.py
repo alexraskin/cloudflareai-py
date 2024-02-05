@@ -6,8 +6,8 @@ import httpx
 from starlette.background import BackgroundTask
 from starlette.responses import StreamingResponse
 
-from .errors import CloudflareException
-from .models import (
+from .exceptions import CloudflareException
+from .enums import (
     AiImageClassificationModels,
     AiSpeechRecognitionModels,
     AiTextGenerationModels,
@@ -16,13 +16,12 @@ from .models import (
     TranslationLanguages,
 )
 
-
 class CloudflareAI:
     """
-    Cloudflare AI API wrapper.
+    Cloudflare AI API Client
 
-    :param api_key: Cloudflare API key.
-    :param account_identifier: Cloudflare account identifier.
+    :param Cloudflare_API_Key: Cloudflare API key.
+    :param Cloudflare_Account_Identifier: Cloudflare Account identifier.
     :param retries: Number of retries. Default is 1.
     :param timeout: Timeout in seconds. Default is 60 seconds.
     """
@@ -269,7 +268,7 @@ class CloudflareAI:
         :return: raw image data or CloudflareException
         """
 
-        if steps > 20: # type: ignore
+        if steps > 20:  # type: ignore
             raise CloudflareException("Steps cannot exceed 20.")
 
         url = self.build_url(model_name=model_name.value)

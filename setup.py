@@ -1,27 +1,31 @@
 import os
-
-from setuptools import find_packages, setup
+from setuptools import setup
+from re import search, MULTILINE
 
 os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
+version = ""
+with open("cloudflareai/__init__.py") as f:
+    version = search(
+        r'^__version__\s*=\s*[\'"]([^\'"]*)[\'"]', f.read(), MULTILINE
+    ).group(1)
 
-VERSION = "0.0.4"
-DESCRIPTION = "Cloudflare AI Python SDK"
-
+if not version:
+    raise RuntimeError("Unable to find version string.")
 
 setup(
-    name="cloudflare-ai",
+    name="cloudflareai",
     author="alexraskin",
-    description=DESCRIPTION,
-    version=VERSION,
+    description="Cloudflare AI Python SDK",
+    version=version,
     url="https://github.com/alexraskin/cloudflare-ai-py",
     author_email="<root@alexraskin.com>",
-    license="MIT License",
+    license="MIT",
     keywords=["module", "Cloudflare", "library", "package", "python", "CloudflareAI"],
     long_description_content_type="text/markdown",
     long_description=open("README.md", encoding="utf-8").read(),
     install_requires=["httpx", "aiofiles", "starlette"],
-    packages=find_packages(),
+    packages=["cloudflareai"],
     classifiers=[
         "Programming Language :: Python",
         "Programming Language :: Python :: 3.10",

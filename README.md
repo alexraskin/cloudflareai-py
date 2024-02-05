@@ -8,7 +8,7 @@ If you have any updates or suggestions, please open an issue or pull request. :)
 ## Installation
 
 ```bash
-pip install cloudflare-ai
+pip install cloudflareai
 ```
 
 ## Usage
@@ -16,7 +16,12 @@ pip install cloudflare-ai
 ```python
 import asyncio
 
-from CloudflareAI import CloudflareAI, AiTextToImageModels, AiTextGenerationModels, AiImageClassificationModels
+from cloudflareai import (
+    CloudflareAI,
+    AiTextToImageModels,
+    AiTextGenerationModels,
+    AiImageClassificationModels,
+)
 
 
 async def main():
