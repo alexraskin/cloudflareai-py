@@ -24,6 +24,8 @@ class CloudflareAI:
     :param Cloudflare_Account_Identifier: Cloudflare Account identifier.
     :param retries: Number of retries. Default is 1.
     :param timeout: Timeout in seconds. Default is 60 seconds.
+
+    :raises CloudflareException: If Cloudflare API key or account identifier is not provided.
     """
 
     def __init__(
@@ -50,7 +52,7 @@ class CloudflareAI:
 
         self.transport = httpx.AsyncHTTPTransport(retries=self.retries)
 
-    def build_url(self, model_name: str) -> str:
+    def _build_url(self, model_name: str) -> str:
         """
         Build the AI Model URL.
 
@@ -131,7 +133,7 @@ class CloudflareAI:
         :return: dict
         """
 
-        url = self.build_url(model_name=model_name.value)
+        url = self._build_url(model_name=model_name.value)
 
         check_image_path = os.path.isfile(image_path)
         if not check_image_path:
@@ -168,7 +170,7 @@ class CloudflareAI:
         if max_tokens > 256:  # type: ignore
             raise CloudflareException("Max tokens cannot exceed 256.")
 
-        url = self.build_url(model_name=model_name.value)
+        url = self._build_url(model_name=model_name.value)
 
         payload = {
             "messages": [
@@ -208,7 +210,7 @@ class CloudflareAI:
         if not os.path.isfile(audio_path):
             raise CloudflareException(f"Audio path {audio_path} is not a file.")
 
-        url = self.build_url(model_name=model_name.value)
+        url = self._build_url(model_name=model_name.value)
 
         async with aiofiles.open(audio_path, "rb") as audio_file:
             audio_data: bytes = await audio_file.read()
@@ -238,7 +240,7 @@ class CloudflareAI:
         if source_lang.value == target_lang.value:
             raise CloudflareException("Source and target languages cannot be the same.")
 
-        url = self.build_url(model_name=model_name.value)
+        url = self._build_url(model_name=model_name.value)
 
         payload = {
             "text": text,
@@ -271,7 +273,7 @@ class CloudflareAI:
         if steps > 20:  # type: ignore
             raise CloudflareException("Steps cannot exceed 20.")
 
-        url = self.build_url(model_name=model_name.value)
+        url = self._build_url(model_name=model_name.value)
 
         payload = {"prompt": prompt, "steps": steps}
 
