@@ -1,5 +1,5 @@
 import os
-from typing import Mapping, Optional, Union
+from typing import Optional, Union, Dict
 
 import aiofiles
 import httpx
@@ -15,6 +15,10 @@ from .enums import (
     AiTranslationModels,
     TranslationLanguages,
 )
+
+from .types import TextGenerationPayload
+from .models import ImageResponse, ApiResponse
+
 
 class CloudflareAI:
     """
@@ -32,17 +36,15 @@ class CloudflareAI:
         self,
         Cloudflare_API_Key: str,
         Cloudflare_Account_Identifier: str,
+        Cloudflare_AI_Gateway_URL: Optional[str] = None,
         Retries: Optional[int] = 1,
         Timeout: Optional[int] = 60,
     ) -> None:
         self.api_key: str = Cloudflare_API_Key
         self.account_identifier: str = Cloudflare_Account_Identifier
-        self.retries: int = Retries or 1
-        self.timeout: int = Timeout or 60
-        self.base_url: str = "https://api.cloudflare.com/client/v4/accounts/{account_identifier}/ai/run/{model_name}"
-        self.headers: Mapping[str, str] = {
-            "Authorization": f"Bearer {Cloudflare_API_Key}",
-        }
+        self.gateway_url: str = Cloudflare_AI_Gateway_URL
+        self.retries: int = Retries
+        self.timeout: int = Timeout
 
         if not self.api_key:
             raise CloudflareException("Cloudflare API key is required.")
@@ -61,9 +63,10 @@ class CloudflareAI:
         :return: str
         """
 
-        return self.base_url.format(
-            account_identifier=self.account_identifier, model_name=model_name
-        )
+        if not self.gateway_url:
+            return f"https://api.cloudflare.com/client/v4/accounts/{self.account_identifier}/ai/run/{model_name}"
+
+        return f"{self.gateway_url}/{model_name}"
 
     async def streaming_response(self, response: httpx.Response) -> StreamingResponse:
         """
@@ -83,7 +86,7 @@ class CloudflareAI:
         method: str,
         url: str,
         data: dict,
-        headers: Optional[Mapping[str, str]] = None,
+        headers: Optional[Dict[str, str]] = None,
         stream: Optional[bool] = False,
     ) -> Union[httpx.Response, StreamingResponse, CloudflareException]:
         """
@@ -98,6 +101,9 @@ class CloudflareAI:
 
         :return: httpx response, StreamingResponse or CloudflareException
         """
+        self.headers: Dict[str, str] = {
+            "Authorization": f"Bearer {self.api_key}",
+        }
 
         if headers is not None:
             self.headers.update(headers)  # type: ignore
@@ -141,7 +147,7 @@ class CloudflareAI:
 
         async with aiofiles.open(image_path, "rb") as img_file:
             image_data = await img_file.read()
-            headers: Mapping[str, str] = {
+            headers: Dict[str, str] = {
                 "Content-Type": "image/jpeg",
             }
             response = await self._fetch("POST", url, data=image_data, headers=headers)  # type: ignore
@@ -154,14 +160,17 @@ class CloudflareAI:
         model_name: AiTextGenerationModels,
         stream: Optional[bool] = False,
         max_tokens: Optional[int] = 256,
-    ) -> Union[dict, StreamingResponse, CloudflareException]:
+    ) -> Union[ApiResponse, StreamingResponse, CloudflareException]:
         """
         Family of generative text models, such as large language models (LLM), that can be adapted for a variety of natural language tasks.
 
         :param prompt: Prompt to generate text from.
         :param system_prompt: System prompt to generate text from.
+        :param model_name: Model
+        :param stream: Stream response or not. Default is False.
+        :param max_tokens: Maximum tokens. Default is 256.
 
-        :return: dict or CloudflareException
+        :return: ApiResponse, StreamingResponse, CloudflareException
         """
 
         if len(prompt) > 4096:
@@ -172,7 +181,7 @@ class CloudflareAI:
 
         url = self._build_url(model_name=model_name.value)
 
-        payload = {
+        payload: TextGenerationPayload = {
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt},
@@ -181,7 +190,7 @@ class CloudflareAI:
             "max_tokens": max_tokens,
         }
 
-        headers = {
+        headers: Dict[str, str] = {
             "Content-Type": "application/json",
         }
 
@@ -189,7 +198,7 @@ class CloudflareAI:
             response = await self._fetch(
                 "POST", url, headers=headers, data=payload, stream=stream
             )
-            return response.json()  # type: ignore
+            return ApiResponse(response.json(), response)  # type: ignore
         else:
             response = await self._fetch(
                 "POST", url, headers=headers, data=payload, stream=stream
@@ -214,7 +223,7 @@ class CloudflareAI:
 
         async with aiofiles.open(audio_path, "rb") as audio_file:
             audio_data: bytes = await audio_file.read()
-            headers = {
+            headers: Dict[str, str] = {
                 "Content-Type": "audio/wav",
             }
             response = await self._fetch("POST", url, data=audio_data, headers=headers)  # type: ignore
@@ -226,7 +235,7 @@ class CloudflareAI:
         source_lang: TranslationLanguages,
         target_lang: TranslationLanguages,
         model_name: AiTranslationModels,
-    ) -> Union[dict, CloudflareException]:
+    ) -> Union[ApiResponse, CloudflareException]:
         """
         Translation models convert a sequence of text from one language to another.
 
@@ -242,25 +251,25 @@ class CloudflareAI:
 
         url = self._build_url(model_name=model_name.value)
 
-        payload = {
+        payload: Dict[str, Union[str, TranslationLanguages]] = {
             "text": text,
             "source_lang": source_lang.value,
             "target_lang": target_lang.value,
         }
 
-        headers = {
+        headers: Dict[str, str] = {
             "Content-Type": "application/json",
         }
 
         response = await self._fetch("POST", url, data=payload, headers=headers)
-        return response.json()  # type: ignore
+        return ApiResponse(response.json())  # type: ignore
 
     async def TextToImage(
         self,
         prompt: str,
         model_name: AiTextToImageModels,
         steps: Optional[int] = 20,
-    ) -> Union[bytes, CloudflareException]:
+    ) -> Union[ImageResponse, CloudflareException]:
         """
         Text to image models generate an image from a text input.
 
@@ -275,11 +284,11 @@ class CloudflareAI:
 
         url = self._build_url(model_name=model_name.value)
 
-        payload = {"prompt": prompt, "steps": steps}
+        payload: Dict[str, str] = {"prompt": prompt, "steps": steps}
 
-        headers = {
+        headers: Dict[str, str] = {
             "Content-Type": "application/json",
         }
 
         response = await self._fetch("POST", url, data=payload, headers=headers)
-        return response.content  # type: ignore
+        return ImageResponse(response)  # type: ignore
