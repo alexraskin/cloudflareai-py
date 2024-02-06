@@ -1,6 +1,7 @@
 import os
+from re import MULTILINE, search
+
 from setuptools import setup
-from re import search, MULTILINE
 
 os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
