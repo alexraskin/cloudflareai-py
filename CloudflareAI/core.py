@@ -1,10 +1,6 @@
-import os
 from typing import Optional, Union, Dict
 
-import aiofiles
 import httpx
-from starlette.background import BackgroundTask
-from starlette.responses import StreamingResponse
 
 from .exceptions import CloudflareException
 from .enums import (
@@ -17,7 +13,13 @@ from .enums import (
 )
 
 from .types import TextGenerationPayload
-from .models import ImageResponse, ApiResponse
+from .models import (
+    CloudflareAPIResponse,
+    CloudflareImageResponse,
+    CloudflareTranslationResponse,
+    CloudflareSpeechRecognitionResponse,
+    CloudflareImageClassificationResponse,
+)
 
 
 class CloudflareAI:
@@ -52,7 +54,7 @@ class CloudflareAI:
         if not self.account_identifier:
             raise CloudflareException("Cloudflare account identifier is required.")
 
-        self.transport = httpx.AsyncHTTPTransport(retries=self.retries)
+        self._transport = httpx.AsyncHTTPTransport(retries=self.retries)
 
     def _build_url(self, model_name: str) -> str:
         """
@@ -68,18 +70,18 @@ class CloudflareAI:
 
         return f"{self.gateway_url}/{model_name}"
 
-    async def streaming_response(self, response: httpx.Response) -> StreamingResponse:
-        """
-        Streaming response.
+    async def _process_stream_response(self, response: httpx.Response) -> bytes:
+        """ "
+        Process the stream response.
 
         :param response: httpx response.
 
-        :return: StreamingResponse
+        :return: bytes
         """
-        return StreamingResponse(
-            response.aiter_bytes(),
-            background=BackgroundTask(response.close),
-        )
+        data = b""
+        async for chunk in response.aiter_bytes():
+            data += chunk
+        return data.decode("utf-8")
 
     async def _fetch(
         self,
@@ -88,7 +90,7 @@ class CloudflareAI:
         data: dict,
         headers: Optional[Dict[str, str]] = None,
         stream: Optional[bool] = False,
-    ) -> Union[httpx.Response, StreamingResponse, CloudflareException]:
+    ) -> Union[httpx.Response, bytes, CloudflareException]:
         """
         httpx request wrapper.
         Please note that this method is for internal use only.
@@ -107,8 +109,8 @@ class CloudflareAI:
 
         if headers is not None:
             self.headers.update(headers)  # type: ignore
-        async with httpx.AsyncClient(transport=self.transport) as client:
-            if headers["Content-Type"] == "application/json":  # type: ignore
+        async with httpx.AsyncClient(transport=self._transport) as client:
+            if headers.get("Content-Type") == "application/json":  # type: ignore
                 req = client.build_request(
                     method, url, headers=self.headers, json=data, timeout=self.timeout
                 )
@@ -119,7 +121,7 @@ class CloudflareAI:
             response = await client.send(req, stream=stream)  # type: ignore
             if response.status_code == 200:
                 if stream:
-                    return await self.streaming_response(response)
+                    return await self._process_stream_response(response)
                 else:
                     return response
             else:
@@ -128,52 +130,46 @@ class CloudflareAI:
                 )
 
     async def ImageClassification(
-        self, image_path: str, model_name: AiImageClassificationModels
-    ) -> Union[dict, CloudflareException]:
+        self, image_bytes: bytes, model_name: AiImageClassificationModels
+    ) -> Union[CloudflareImageClassificationResponse, CloudflareException]:
         """
         Image classification models take an image input and assigns it labels or classes.
 
         :param image_path: Path to the image file.
         :param model_name: Model name.
 
-        :return: dict
+        :return: CloudflareImageClassificationResponse
         """
 
+        if len(image_bytes) > 6 * 1048576:
+            raise CloudflareException("Image file size cannot exceed 6MB.")
+
         url = self._build_url(model_name=model_name.value)
-
-        check_image_path = os.path.isfile(image_path)
-        if not check_image_path:
-            raise CloudflareException(f"Image path {image_path} is not a file.")
-
-        async with aiofiles.open(image_path, "rb") as img_file:
-            image_data = await img_file.read()
-            headers: Dict[str, str] = {
-                "Content-Type": "image/jpeg",
-            }
-            response = await self._fetch("POST", url, data=image_data, headers=headers)  # type: ignore
-            return response.json()  # type: ignore
+        headers = {"Content-Type": "image/*"}
+        response = await self._fetch("POST", url, data=image_bytes, headers=headers)  # type: ignore
+        return CloudflareImageClassificationResponse(response=response)  # type: ignore
 
     async def TextGeneration(
         self,
-        prompt: str,
+        user_prompt: str,
         system_prompt: str,
         model_name: AiTextGenerationModels,
         stream: Optional[bool] = False,
         max_tokens: Optional[int] = 256,
-    ) -> Union[ApiResponse, StreamingResponse, CloudflareException]:
+    ) -> Union[CloudflareAPIResponse, bytes, CloudflareException]:
         """
         Family of generative text models, such as large language models (LLM), that can be adapted for a variety of natural language tasks.
 
-        :param prompt: Prompt to generate text from.
-        :param system_prompt: System prompt to generate text from.
-        :param model_name: Model
+        :param user_prompt: Prompt to generate text from.
+        :param system_prompt: Prompt to tell the model what to do.
+        :param model_name: Model enum 
         :param stream: Stream response or not. Default is False.
         :param max_tokens: Maximum tokens. Default is 256.
 
-        :return: ApiResponse, StreamingResponse, CloudflareException
+        :return: ApiResponse, bytes, CloudflareException
         """
 
-        if len(prompt) > 4096:
+        if len(user_prompt) > 4096:
             raise CloudflareException("Prompt length cannot exceed 4096 characters.")
 
         if max_tokens > 256:  # type: ignore
@@ -184,7 +180,7 @@ class CloudflareAI:
         payload: TextGenerationPayload = {
             "messages": [
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": prompt},
+                {"role": "user", "content": user_prompt},
             ],
             "stream": stream,
             "max_tokens": max_tokens,
@@ -198,36 +194,32 @@ class CloudflareAI:
             response = await self._fetch(
                 "POST", url, headers=headers, data=payload, stream=stream
             )
-            return ApiResponse(response.json(), response)  # type: ignore
+            return CloudflareAPIResponse(response=response)
         else:
             response = await self._fetch(
                 "POST", url, headers=headers, data=payload, stream=stream
             )
-            return response  # type: ignore
+            return response
 
     async def SpeechRecognition(
-        self, audio_path: str, model_name: AiSpeechRecognitionModels
-    ) -> Union[dict, CloudflareException]:
+        self, audio_bytes: bytes, model_name: AiSpeechRecognitionModels
+    ) -> Union[CloudflareSpeechRecognitionResponse, CloudflareException]:
         """
         Automatic speech recognition (ASR) models convert a speech signal, typically an audio input, to text.
 
-        :param audio_path: Path to the audio file.
+        :param audio_file: Audio file in bytes.
         :param model_name: Model name.
 
-        :return: dict
+        :return: CloudflareSpeechRecognitionResponse
         """
-        if not os.path.isfile(audio_path):
-            raise CloudflareException(f"Audio path {audio_path} is not a file.")
+
+        if len(audio_bytes) > 6 * 1048576:
+            raise CloudflareException("Audio file size cannot exceed 6MB.")
 
         url = self._build_url(model_name=model_name.value)
-
-        async with aiofiles.open(audio_path, "rb") as audio_file:
-            audio_data: bytes = await audio_file.read()
-            headers: Dict[str, str] = {
-                "Content-Type": "audio/wav",
-            }
-            response = await self._fetch("POST", url, data=audio_data, headers=headers)  # type: ignore
-            return response.json()  # type: ignore
+        headers = {"Content-Type": "audio/*"}
+        response = await self._fetch("POST", url, data=audio_bytes, headers=headers)
+        return CloudflareSpeechRecognitionResponse(response=response)
 
     async def Translation(
         self,
@@ -235,7 +227,7 @@ class CloudflareAI:
         source_lang: TranslationLanguages,
         target_lang: TranslationLanguages,
         model_name: AiTranslationModels,
-    ) -> Union[ApiResponse, CloudflareException]:
+    ) -> Union[CloudflareTranslationResponse, CloudflareException]:
         """
         Translation models convert a sequence of text from one language to another.
 
@@ -262,14 +254,14 @@ class CloudflareAI:
         }
 
         response = await self._fetch("POST", url, data=payload, headers=headers)
-        return ApiResponse(response.json())  # type: ignore
+        return CloudflareTranslationResponse(response)
 
     async def TextToImage(
         self,
         prompt: str,
         model_name: AiTextToImageModels,
         steps: Optional[int] = 20,
-    ) -> Union[ImageResponse, CloudflareException]:
+    ) -> Union[CloudflareImageResponse, CloudflareException]:
         """
         Text to image models generate an image from a text input.
 
@@ -291,4 +283,4 @@ class CloudflareAI:
         }
 
         response = await self._fetch("POST", url, data=payload, headers=headers)
-        return ImageResponse(response)  # type: ignore
+        return CloudflareImageResponse(response=response)

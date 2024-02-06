@@ -24,10 +24,10 @@ setup(
     keywords=["module", "Cloudflare", "library", "package", "python", "CloudflareAI"],
     long_description_content_type="text/markdown",
     long_description=open("README.md", encoding="utf-8").read(),
-    install_requires=["httpx", "aiofiles", "starlette"],
+    install_requires=["httpx"],
     packages=["cloudflareai"],
     classifiers=[
         "Programming Language :: Python",
-        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
     ],
 )
