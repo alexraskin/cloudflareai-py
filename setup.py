@@ -3,8 +3,6 @@ from re import MULTILINE, search
 
 from setuptools import setup
 
-os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
-
 version = ""
 with open("cloudflareai/__init__.py") as f:
     version = search(

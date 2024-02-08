@@ -4,7 +4,7 @@ from typing import Dict, Optional, Union
 
 import httpx
 
-from .exceptions import CloudflareException
+from .exceptions import CloudflareAPIException
 
 
 class Http:
@@ -38,7 +38,7 @@ class Http:
         data: dict,
         headers: Optional[Dict[str, str]] = None,
         stream: Optional[bool] = False,
-    ) -> Union[httpx.Response, bytes, CloudflareException]:
+    ) -> Union[httpx.Response, bytes, CloudflareAPIException]:
         self.headers: Dict[str, str] = {
             "Authorization": f"Bearer {self.api_key}",
         }
@@ -61,6 +61,6 @@ class Http:
                 else:
                     return response
             else:
-                raise CloudflareException(
+                raise CloudflareAPIException(
                     f"Error {response.status_code}: {response.reason_phrase}"
                 )
