@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Dict, Optional, Union
 
+from .http import Http
 from .enums import (
     AiImageClassificationModels,
     AiSpeechRecognitionModels,
@@ -10,8 +11,6 @@ from .enums import (
     AiTranslationModels,
     TranslationLanguages,
 )
-from .exceptions import CloudflareException
-from .http import Http
 from .models import (
     CloudflareAPIResponse,
     CloudflareImageClassificationResponse,
@@ -19,7 +18,7 @@ from .models import (
     CloudflareSpeechRecognitionResponse,
     CloudflareTranslationResponse,
 )
-from .types import TextGenerationPayload
+from .exceptions import CloudflareException
 
 
 class CloudflareAI:
@@ -28,10 +27,13 @@ class CloudflareAI:
 
     :param Cloudflare_API_Key: Cloudflare API key.
     :param Cloudflare_Account_Identifier: Cloudflare Account identifier.
+    :param Cloudflare_AI_Gateway_URL: Cloudflare AI Gateway URL. Default is None.
     :param retries: Number of retries. Default is 1.
     :param timeout: Timeout in seconds. Default is 60 seconds.
 
     :raises CloudflareException: If Cloudflare API key or account identifier is not provided.
+
+    url: https://developers.cloudflare.com/workers-ai/
     """
 
     def __init__(
@@ -44,10 +46,12 @@ class CloudflareAI:
     ) -> None:
         self.api_key: str = Cloudflare_API_Key
         self.account_identifier: str = Cloudflare_Account_Identifier
-        self.gateway_url: str = Cloudflare_AI_Gateway_URL
-        self.retries: int = Retries
-        self.timeout: int = Timeout
-        self._http = Http(api_key=self.api_key, retries=self.retries, timeout=self.timeout)
+        self.gateway_url: Union[str, None] = Cloudflare_AI_Gateway_URL
+        self.retries: Union[int, None] = Retries
+        self.timeout: Union[int, None] = Timeout
+        self._http = Http(
+            api_key=self.api_key, retries=self.retries, timeout=self.timeout
+        )
 
         if not self.api_key:
             raise CloudflareException("Cloudflare API key is required.")
@@ -120,7 +124,7 @@ class CloudflareAI:
 
         url = self._build_url(model_name=model_name.value)
 
-        payload: TextGenerationPayload = {
+        payload = {
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
@@ -137,12 +141,12 @@ class CloudflareAI:
             response = await self._http.fetch(
                 "POST", url, headers=headers, data=payload, stream=stream
             )
-            return CloudflareAPIResponse(response=response)
+            return CloudflareAPIResponse(response=response)  # type: ignore
         else:
             response = await self._http.fetch(
                 "POST", url, headers=headers, data=payload, stream=stream
             )
-            return response
+            return response  # type: ignore
 
     async def SpeechRecognition(
         self, audio_bytes: bytes, model_name: AiSpeechRecognitionModels
@@ -164,7 +168,7 @@ class CloudflareAI:
         response = await self._http.fetch(
             "POST", url, data=audio_bytes, headers=headers
         )
-        return CloudflareSpeechRecognitionResponse(response=response)
+        return CloudflareSpeechRecognitionResponse(response=response)  # type: ignore
 
     async def Translation(
         self,
@@ -199,7 +203,7 @@ class CloudflareAI:
         }
 
         response = await self._http.fetch("POST", url, data=payload, headers=headers)
-        return CloudflareTranslationResponse(response)
+        return CloudflareTranslationResponse(response=response)  # type: ignore
 
     async def TextToImage(
         self,
@@ -221,11 +225,17 @@ class CloudflareAI:
 
         url = self._build_url(model_name=model_name.value)
 
-        payload: Dict[str, str] = {"prompt": prompt, "steps": steps}
+        payload: Dict[
+            str,
+            str,
+        ] = {
+            "prompt": prompt,
+            "steps": steps,  # type: ignore
+        }  # type: ignore
 
         headers: Dict[str, str] = {
             "Content-Type": "application/json",
         }
 
         response = await self._http.fetch("POST", url, data=payload, headers=headers)
-        return CloudflareImageResponse(response=response)
+        return CloudflareImageResponse(response=response)  # type: ignore
