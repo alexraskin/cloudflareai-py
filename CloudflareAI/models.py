@@ -7,7 +7,7 @@ class CloudflareAPIResponse:
     """
 
     def __init__(self, response: httpx.Response) -> None:
-        self.response = response
+        self.response: httpx.Response = response
 
     @property
     def status_code(self) -> int:
@@ -18,11 +18,11 @@ class CloudflareAPIResponse:
         return self.response.json()
 
     @property
-    def headers(self) -> dict:
+    def headers(self) -> httpx.Headers:
         return self.response.headers
 
     @property
-    def url(self) -> str:
+    def url(self) -> httpx.URL:
         return self.response.url
 
     @property
@@ -48,14 +48,14 @@ class CloudflareImageResponse:
     """
 
     def __init__(self, response: httpx.Response):
-        self.response = response
+        self.response: httpx.Response = response
 
     @property
     def status_code(self) -> int:
         return self.response.status_code
 
     @property
-    def headers(self) -> dict:
+    def headers(self) -> httpx.Headers:
         return self.response.headers
 
     @property
@@ -73,7 +73,7 @@ class CloudflareTranslationResponse:
     """
 
     def __init__(self, response: httpx.Response) -> None:
-        self.response = response
+        self.response: httpx.Response = response
 
     @property
     def status_code(self) -> int:
@@ -84,11 +84,11 @@ class CloudflareTranslationResponse:
         return self.response.json()
 
     @property
-    def headers(self) -> dict:
+    def headers(self) -> httpx.Headers:
         return self.response.headers
 
     @property
-    def url(self) -> str:
+    def url(self) -> httpx.URL:
         return self.response.url
 
     @property
@@ -114,7 +114,7 @@ class CloudflareSpeechRecognitionResponse:
     """
 
     def __init__(self, response: httpx.Response) -> None:
-        self.response = response
+        self.response: httpx.Response = response
 
     @property
     def status_code(self) -> int:
@@ -125,11 +125,11 @@ class CloudflareSpeechRecognitionResponse:
         return self.response.json()
 
     @property
-    def headers(self) -> dict:
+    def headers(self) -> httpx.Headers:
         return self.response.headers
 
     @property
-    def url(self) -> str:
+    def url(self) -> httpx.URL:
         return self.response.url
 
     @property
@@ -163,7 +163,7 @@ class CloudflareImageClassificationResponse:
     """
 
     def __init__(self, response: httpx.Response) -> None:
-        self.response = response
+        self.response: httpx.Response = response
 
     @property
     def status_code(self) -> int:
@@ -174,11 +174,11 @@ class CloudflareImageClassificationResponse:
         return self.response.json()
 
     @property
-    def headers(self) -> dict:
+    def headers(self) -> httpx.Headers:
         return self.response.headers
 
     @property
-    def url(self) -> str:
+    def url(self) -> httpx.URL:
         return self.response.url
 
     @property
