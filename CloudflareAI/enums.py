@@ -1,3 +1,9 @@
+"""
+Enums for AI models
+
+View more information here: https://developers.cloudflare.com/workers-ai/models/text-generation/
+"""
+
 from enum import Enum
 
 
@@ -8,9 +14,17 @@ class AiImageClassificationModels(Enum):
     Attributes:
     ----------
     RESNET_50 : str : "@cf/microsoft/resnet-50"
+
+    methods:
+    --------
+    models(cls) -> list[str]: return a list of models
     """
 
     RESNET_50 = "@cf/microsoft/resnet-50"
+
+    @classmethod
+    def models(cls) -> list[str]:
+        return [model.value for model in cls]
 
 
 class AiTranslationModels(Enum):
@@ -20,9 +34,17 @@ class AiTranslationModels(Enum):
     Attributes:
     ----------
     META_100 : str : "@cf/meta/m2m100-1.2b"
+
+    methods:
+    --------
+    models(cls) -> list[str]: return a list of models
     """
 
     META_100 = "@cf/meta/m2m100-1.2b"
+
+    @classmethod
+    def models(cls) -> list[str]:
+        return [model.value for model in cls]
 
 
 class AiTextGenerationModels(Enum):
@@ -43,8 +65,22 @@ class AiTextGenerationModels(Enum):
     LLAMA_GUARD_7B : str : "@hf/thebloke/llamaguard-7b-awq"
     DEEPSEEK_CODER_6_7_BASE : str : "@hf/thebloke/deepseek-coder-6.7b-base-awq"
     DEEPSEEK_CODER_6_7_INSTRUCT : str : "@hf/thebloke/deepseek-coder-6.7b-instruct-awq"
+    DEEPSEEK_CODER_6_7_INSTRUCT_V2 : str : "@hf/thebloke/deepseek-coder-6.7b-instruct-v2-awq"
+    DEEPSEEK_MATH_7B_INSTRUCT : str : "@cf/deepseek-ai/deepseek-math-7b-instruct"
+    OPENCHAT_3_5 : str : "@cf/openai/openchat-3-5"
+    PHI_2 : str : "@cf/phi/phi-2"
+    TINYLAMA_1_1B : str : "@cf/tinyllama/tinyllama-1.1b-chat-v1.0"
+    DISCOLM_GERMAN_7B : str : "@cf/thebloke/discolm-german-7b-v1-awq"
+    QWEN_1_5_0_5B_CHAT : str : "@cf/qwen/qwen-1.5.0.5b-chat"
+    QWEN1_5_1_8B_CHAT : str : "@cf/qwen/qwen1.5-1.8b-chat"
+    QWEN_1_5_7B_CHAT_AWQ : str : "@cf/qwen/qwen1.5-7b-chat-awq"
+    QWEN_1_5_14B_CHAT_AWQ : str : "@cf/qwen/qwen1.5-14b-chat-awq"
+    FALCON_7B_INSTRUCT : str : "@cf/falcon/falcon-7b-instruct"
+    SQL_CODER_7B_2 : str : "@cf/defog/sqlcoder-7b-2"
 
-    View more information here: https://developers.cloudflare.com/workers-ai/models/text-generation/
+    methods:
+    --------
+    models(cls) -> list[str]: return a list of models
     """
 
     LLAMA_2_7B = "@cf/meta/llama-2-7b-chat-fp16"
@@ -59,6 +95,41 @@ class AiTextGenerationModels(Enum):
     LLAMA_GUARD_7B = "@hf/thebloke/llamaguard-7b-awq"
     DEEPSEEK_CODER_6_7_BASE = "@hf/thebloke/deepseek-coder-6.7b-base-awq"
     DEEPSEEK_CODER_6_7_INSTRUCT = "@hf/thebloke/deepseek-coder-6.7b-instruct-awq"
+    DEEPSEEK_MATH_7B_INSTRUCT = "@cf/deepseek-ai/deepseek-math-7b-instruct"
+    OPENCHAT_3_5 = "@cf/openchat/openchat-3.5-0106"
+    PHI_2 = "@cf/microsoft/phi-2"
+    TINYLAMA_1_1B = "@cf/tinyllama/tinyllama-1.1b-chat-v1.0"
+    DISCOLM_GERMAN_7B = "@cf/thebloke/discolm-german-7b-v1-awq"
+    QWEN_1_5_0_5B_CHAT = "@cf/qwen/qwen1.5-0.5b-chat"
+    QWEN1_5_1_8B_CHAT = "@cf/qwen/qwen1.5-1.8b-chat"
+    QWEN_1_5_7B_CHAT_AWQ = "@cf/qwen/qwen1.5-7b-chat-awq"
+    QWEN_1_5_14B_CHAT_AWQ = "@cf/qwen/qwen1.5-14b-chat-awq"
+    FALCON_7B_INSTRUCT = "@cf/tiiuae/falcon-7b-instruct"
+    SQL_CODER_7B_2 = "@cf/defog/sqlcoder-7b-2"
+
+    @classmethod
+    def models(cls) -> list[str]:
+        return [model.value for model in cls]
+
+
+class ImageToTextModels(Enum):
+    """
+    Enum for Image to Text models
+
+    Attributes:
+    ----------
+    UFORM_GEN2_QWEN_500M : str = "@cf/unum/uform-gen2-qwen-500m"
+
+    methods:
+    --------
+    models(cls) -> list[str]: return a list of models
+    """
+
+    UFORM_GEN2_QWEN_500M = "@cf/unum/uform-gen2-qwen-500m"
+
+    @classmethod
+    def models(cls) -> list[str]:
+        return [model.value for model in cls]
 
 
 class AiSpeechRecognitionModels(Enum):
@@ -68,9 +139,17 @@ class AiSpeechRecognitionModels(Enum):
     Attributes:
     ----------
     WHISPER : str : "@cf/openai/whisper"
+
+    methods:
+    --------
+    models(cls) -> list[str]: return a list of models
     """
 
     WHISPER = "@cf/openai/whisper"
+
+    @classmethod
+    def models(cls) -> list[str]:
+        return [model.value for model in cls]
 
 
 class AiTextToImageModels(Enum):
@@ -80,9 +159,67 @@ class AiTextToImageModels(Enum):
     Attributes:
     ----------
     XL_BASE : str : "@cf/stabilityai/stable-diffusion-xl-base-1.0"
+    DREAMSHAPER_8_LCM : str : "@cf/lykon/dreamshaper-8-lcm"
+    STABLE_DIFFUSION_1_5_INPAINTING : str : "@cf/runwayml/stable-diffusion-v1-5-inpainting"
+    STABLE_DIFFUSION_1_5_IMG_2_IMG : str : "@cf/runwayml/stable-diffusion-v1-5-img2img"
+    STABLE_DIFFUSION_XL_LIGHTNING : str : "@cf/bytedance/stable-diffusion-xl-lightning"
+
+    methods:
+    --------
+    models(cls) -> list[str]: return a list of models
     """
 
-    XL_BASE = "@cf/stabilityai/stable-diffusion-xl-base-1.0"
+    STABLE_DIFFUSION_XL_BASE_1_0 = "@cf/stabilityai/stable-diffusion-xl-base-1.0"
+    DREAMSHAPER_8_LCM = "@cf/lykon/dreamshaper-8-lcm"
+    STABLE_DIFFUSION_1_5_INPAINTING = "@cf/runwayml/stable-diffusion-v1-5-inpainting"
+    STABLE_DIFFUSION_1_5_IMG_2_IMG = "@cf/runwayml/stable-diffusion-v1-5-img2img"
+    STABLE_DIFFUSION_XL_LIGHTNING = "@cf/bytedance/stable-diffusion-xl-lightning"
+
+    @classmethod
+    def models(cls) -> list[str]:
+        return [model.value for model in cls]
+
+
+class AISummarizationModels(Enum):
+    """
+    Enum for Summarization models
+
+    Attributes:
+    _________
+    BART_LARGE_CNN : str : "@cf/facebook/bart-large-cnn"
+
+    methods:
+    --------
+    models(cls) -> list[str]: return a list of models
+
+    """
+
+    BART_LARGE_CNN = "@cf/facebook/bart-large-cnn"
+
+    @classmethod
+    def models(cls) -> list[str]:
+        return [model.value for model in cls]
+
+
+class ObjectDetectionModels(Enum):
+    """
+    Enum for Object Detection models
+
+    Attributes:
+    ----------
+    DETR_RESNET_50 : str : "@cf/meta/detr-resnet-50"
+
+    methods:
+    --------
+    models(cls) -> list[str]: return a list of models
+
+    """
+
+    DETR_RESNET_50 = "@cf/meta/detr-resnet-50"
+
+    @classmethod
+    def models(cls) -> list[str]:
+        return [model.value for model in cls]
 
 
 class TranslationLanguages(Enum):
@@ -101,6 +238,10 @@ class TranslationLanguages(Enum):
     JA : str : "japanese"
     PT : str : "portuguese"
     HI : str : "hindi"
+
+    methods:
+    --------
+    languages(cls) -> list[str]: return a list of languages
     """
 
     EN = "english"
@@ -113,3 +254,7 @@ class TranslationLanguages(Enum):
     JA = "japanese"
     PT = "portuguese"
     HI = "hindi"
+
+    @classmethod
+    def languages(cls) -> list[str]:
+        return [lang.value for lang in cls]

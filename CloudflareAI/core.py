@@ -1,6 +1,4 @@
-from __future__ import annotations
-
-from typing import Dict, Optional, Union
+from typing import Optional, Union, Dict
 
 from .http import Http
 from .enums import (
@@ -10,6 +8,10 @@ from .enums import (
     AiTextToImageModels,
     AiTranslationModels,
     TranslationLanguages,
+    ImageToTextModels,
+    AISummarizationModels,
+    ImageToTextModels,
+    ObjectDetectionModels,
 )
 from .models import (
     CloudflareAPIResponse,
@@ -17,6 +19,7 @@ from .models import (
     CloudflareImageResponse,
     CloudflareSpeechRecognitionResponse,
     CloudflareTranslationResponse,
+    ImageToTextModelsResponse,
 )
 from .exceptions import CloudflareException
 
@@ -47,8 +50,8 @@ class CloudflareAI:
         self.api_key: str = Cloudflare_API_Key
         self.account_identifier: str = Cloudflare_Account_Identifier
         self.gateway_url: Union[str, None] = Cloudflare_AI_Gateway_URL
-        self.retries: Union[int, None] = Retries
-        self.timeout: Union[int, None] = Timeout
+        self.retries: int = Retries if Retries is not None else 1
+        self.timeout: int = Timeout if Timeout is not None else 60
         self._http = Http(
             api_key=self.api_key, retries=self.retries, timeout=self.timeout
         )
@@ -93,15 +96,19 @@ class CloudflareAI:
         response = await self._http.fetch(
             "POST", url, data=image_bytes, headers=headers
         )
-        return CloudflareImageClassificationResponse(response=response)  # type: ignore
+        if response.status_code != 200:
+            return CloudflareException(
+                f"The request failed with status code {response.status_code}."
+            )
+        return CloudflareImageClassificationResponse(response=response)
 
     async def TextGeneration(
         self,
         user_prompt: str,
         system_prompt: str,
         model_name: AiTextGenerationModels,
-        stream: Optional[bool] = False,
-        max_tokens: Optional[int] = 256,
+        stream=False,
+        max_tokens=256,
     ) -> Union[CloudflareAPIResponse, bytes, CloudflareException]:
         """
         Family of generative text models, such as large language models (LLM),
@@ -119,12 +126,12 @@ class CloudflareAI:
         if len(user_prompt) > 4096:
             raise CloudflareException("Prompt length cannot exceed 4096 characters.")
 
-        if max_tokens > 256:  # type: ignore
+        if max_tokens > 256:
             raise CloudflareException("Max tokens cannot exceed 256.")
 
         url = self._build_url(model_name=model_name.value)
 
-        payload = {
+        payload: dict = {
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
@@ -133,20 +140,20 @@ class CloudflareAI:
             "max_tokens": max_tokens,
         }
 
-        headers: Dict[str, str] = {
+        headers: dict[str, str] = {
             "Content-Type": "application/json",
         }
 
+        response = await self._http.fetch(
+            "POST", url, data=payload, headers=headers, stream=stream
+        )
+        if response.status_code != 200:
+            return CloudflareException(
+                f"The request failed with status code {response.status_code}."
+            )
         if not stream:
-            response = await self._http.fetch(
-                "POST", url, headers=headers, data=payload, stream=stream
-            )
-            return CloudflareAPIResponse(response=response)  # type: ignore
-        else:
-            response = await self._http.fetch(
-                "POST", url, headers=headers, data=payload, stream=stream
-            )
-            return response  # type: ignore
+            return CloudflareAPIResponse(response=response)
+        return await self._http.process_stream_response(response)
 
     async def SpeechRecognition(
         self, audio_bytes: bytes, model_name: AiSpeechRecognitionModels
@@ -168,7 +175,11 @@ class CloudflareAI:
         response = await self._http.fetch(
             "POST", url, data=audio_bytes, headers=headers
         )
-        return CloudflareSpeechRecognitionResponse(response=response)  # type: ignore
+        if response.status_code != 200:
+            return CloudflareException(
+                f"The request failed with status code {response.status_code}."
+            )
+        return CloudflareSpeechRecognitionResponse(response=response)
 
     async def Translation(
         self,
@@ -203,13 +214,17 @@ class CloudflareAI:
         }
 
         response = await self._http.fetch("POST", url, data=payload, headers=headers)
-        return CloudflareTranslationResponse(response=response)  # type: ignore
+        if response.status_code != 200:
+            return CloudflareException(
+                f"The API returned a non 200 statusCode: {response.status_code}."
+            )
+        return CloudflareTranslationResponse(response=response)
 
     async def TextToImage(
         self,
         prompt: str,
         model_name: AiTextToImageModels,
-        steps: Optional[int] = 20,
+        steps=20,
     ) -> Union[CloudflareImageResponse, CloudflareException]:
         """
         Text to image models generate an image from a text input.
@@ -220,22 +235,104 @@ class CloudflareAI:
         :return: raw image data or CloudflareException
         """
 
-        if steps > 20:  # type: ignore
+        if steps > 20:
             raise CloudflareException("Steps cannot exceed 20.")
 
         url = self._build_url(model_name=model_name.value)
 
         payload: Dict[
             str,
-            str,
+            Union[str, int],
         ] = {
             "prompt": prompt,
-            "steps": steps,  # type: ignore
-        }  # type: ignore
+            "steps": steps,
+        }
 
         headers: Dict[str, str] = {
             "Content-Type": "application/json",
         }
 
         response = await self._http.fetch("POST", url, data=payload, headers=headers)
-        return CloudflareImageResponse(response=response)  # type: ignore
+        if response.status_code != 200:
+            return CloudflareException(
+                f"The API returned a non 200 statusCode: {response.status_code}."
+            )
+        return CloudflareImageResponse(response=response)
+
+    async def ImageToText(
+        self, image_bytes: bytes, model: ImageToTextModels
+    ) -> Union[ImageToTextModelsResponse, CloudflareException]:
+        """
+        Image to text models convert an image to text.
+
+        :param image_bytes: Image file in bytes.
+
+        :return: str or CloudflareException
+        """
+
+        if len(image_bytes) > 6 * 1048576:
+            raise CloudflareException("Image file size cannot exceed 6MB.")
+
+        url = self._build_url(model_name=model.value)
+        headers: dict = {"Content-Type": "image/*"}
+        response = await self._http.fetch(
+            "POST", url, data=image_bytes, headers=headers
+        )
+        if response.status_code != 200:
+            return CloudflareException(
+                f"The API returned a non 200 statusCode: {response.status_code}."
+            )
+        return ImageToTextModelsResponse(response=response)
+
+    async def Summarization(
+        self, text: str, model_name: AISummarizationModels
+    ) -> Union[CloudflareAPIResponse, CloudflareException]:
+        """
+        Summarization models generate a summary of a longer piece of text.
+
+        :param text: Text to summarize.
+        :param model_name: Model name.
+
+        :return: dict or CloudflareException
+        """
+
+        url = self._build_url(model_name=model_name.value)
+
+        payload: Dict[str, str] = {"text": text}
+
+        headers: Dict[str, str] = {
+            "Content-Type": "application/json",
+        }
+
+        response = await self._http.fetch("POST", url, data=payload, headers=headers)
+        if response.status_code != 200:
+            return CloudflareException(
+                f"The API returned a non 200 statusCode: {response.status_code}."
+            )
+        return CloudflareAPIResponse(response=response)
+
+    async def ObjectDetection(
+        self, image_bytes: bytes, model_name: ObjectDetectionModels
+    ) -> Union[CloudflareAPIResponse, CloudflareException]:
+        """
+        Object detection models detect and classify objects in an image.
+
+        :param image_bytes: Image file in bytes.
+        :param model_name: Model name.
+
+        :return: dict or CloudflareException
+        """
+
+        if len(image_bytes) > 6 * 1048576:
+            raise CloudflareException("Image file size cannot exceed 6MB.")
+
+        url = self._build_url(model_name=model_name.value)
+        headers: dict = {"Content-Type": "image/*"}
+        response = await self._http.fetch(
+            "POST", url, data=image_bytes, headers=headers
+        )
+        if response.status_code != 200:
+            return CloudflareException(
+                f"The API returned a non 200 statusCode: {response.status_code}."
+            )
+        return CloudflareAPIResponse(response=response)

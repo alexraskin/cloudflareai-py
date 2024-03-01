@@ -9,7 +9,7 @@ from .exceptions import CloudflareAPIException
 
 class Http:
     """
-    Http Client for Cloudflare AI API.
+    Httpx Wrapper for Cloudflare AI API.
     """
 
     def __init__(
@@ -40,7 +40,7 @@ class Http:
         data: Union[dict, bytes],
         headers: Optional[Dict[str, str]] = None,
         stream: Optional[bool] = False,
-    ) -> Union[httpx.Response, bytes, CloudflareAPIException]:
+    ) -> httpx.Response:
         self.headers: Dict[str, str] = {
             "Authorization": f"Bearer {self.api_key}",
         }
@@ -56,13 +56,5 @@ class Http:
                 req = client.build_request(
                     method, url, headers=self.headers, data=data, timeout=self.timeout  # type: ignore
                 )
-            response = await client.send(req, stream=stream)  # type: ignore
-            if response.status_code == 200:
-                if stream:
-                    return await self.process_stream_response(response)
-                else:
-                    return response
-            else:
-                raise CloudflareAPIException(
-                    f"Error {response.status_code}: {response.reason_phrase}"
-                )
+            response = await client.send(req, stream=stream or False)
+            return response
