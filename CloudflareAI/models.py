@@ -31,7 +31,7 @@ class CloudflareAPIResponse:
 
     @property
     def success(self) -> bool:
-        return self.response.json().get("success", False)
+        return self.response.json().get("success", "false")
 
     @property
     def errors(self) -> list:
@@ -47,7 +47,7 @@ class CloudflareImageResponse:
     A class to represent the response from the Cloudflare AI Image API.
     """
 
-    def __init__(self, response: httpx.Response):
+    def __init__(self, response: httpx.Response) -> None:
         self.response: httpx.Response = response
 
     @property
@@ -57,6 +57,10 @@ class CloudflareImageResponse:
     @property
     def headers(self) -> httpx.Headers:
         return self.response.headers
+
+    @property
+    def url(self) -> httpx.URL:
+        return self.response.url
 
     @property
     def image_format(self) -> str:
@@ -200,3 +204,44 @@ class CloudflareImageClassificationResponse:
     @property
     def scores(self) -> list:
         return [item["score"] for item in self.response.json().get("result", {})]
+
+
+class ImageToTextModelsResponse:
+    """
+    A class to represent the response from the Cloudflare AI Image to Text Models API.
+    """
+
+    def __init__(self, response: httpx.Response) -> None:
+        self.response: httpx.Response = response
+
+    @property
+    def status_code(self) -> int:
+        return self.response.status_code
+
+    @property
+    def json(self) -> httpx.Response:
+        return self.response.json()
+
+    @property
+    def headers(self) -> httpx.Headers:
+        return self.response.headers
+
+    @property
+    def url(self) -> httpx.URL:
+        return self.response.url
+
+    @property
+    def success(self) -> bool:
+        return self.response.json().get("success", False)
+
+    @property
+    def errors(self) -> list:
+        return self.response.json().get("errors", [])
+
+    @property
+    def properties(self) -> list:
+        return self.response.json().get("properties", {})
+
+    @property
+    def description(self) -> str:
+        return self.response.json().get("properties", {}).get("description", {})
