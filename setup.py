@@ -10,7 +10,7 @@ with open("cloudflareai/__init__.py") as f:
     ).group(1)
 
 if not version:
-    raise RuntimeError("Unable to find version string.")
+    raise ValueError("Unable to find version string.")
 
 setup(
     name="cloudflareai",

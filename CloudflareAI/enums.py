@@ -1,7 +1,7 @@
 """
 Enums for AI models
 
-View more information here: https://developers.cloudflare.com/workers-ai/models/text-generation/
+View more information here: https://developers.cloudflare.com/workers-ai/models/
 """
 
 from enum import Enum
